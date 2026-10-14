@@ -1,0 +1,6 @@
+{
+  "name": "Rahasia Monetisasi Aplikasi Gratis",
+  "description": "Eksplorasi interaktif tentang bagaimana aplikasi gratis menghasilkan keuntungan, dilengkapi narasi suara AI (TTS) cerdas dan simulasi ekonomi digital.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
