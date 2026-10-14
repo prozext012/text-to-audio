@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ExternalLink, Check, Copy, Sparkles, Github, Terminal } from 'lucide-react';
+import { X, ExternalLink, Check, Copy, Github, AlertCircle } from 'lucide-react';
 
 interface VercelDeployGuideModalProps {
   isOpen: boolean;
@@ -29,8 +29,8 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
               </svg>
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold">Panduan Hosting di Vercel (via GitHub)</h3>
-              <p className="text-xs text-slate-300">Konfigurasi vercel.json & Serverless API siap deploy</p>
+              <h3 className="text-base sm:text-lg font-bold">Solusi Build & Hosting Vercel</h3>
+              <p className="text-xs text-slate-300">Konfigurasi Web App (bukan APK) & Perbaikan ERESOLVE</p>
             </div>
           </div>
           <button
@@ -43,11 +43,20 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+          {/* Resolution Banner */}
           <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start gap-2.5">
             <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
             <div>
-              <strong className="block text-emerald-950">Aplikasi sudah 100% siap untuk Vercel!</strong>
-              File <code className="bg-emerald-100 px-1 py-0.5 rounded text-xs">vercel.json</code> dan Serverless Functions di <code className="bg-emerald-100 px-1 py-0.5 rounded text-xs">/api/tts.ts</code> sudah dikonfigurasi secara otomatis.
+              <strong className="block text-emerald-950">Masalah ERESOLVE esbuild Sudah Diperbaiki!</strong>
+              Penyebab error di Vercel adalah konflik versi paket <code className="bg-emerald-100 px-1 py-0.5 rounded text-xs font-mono">esbuild</code> dengan Vite 8. Kami telah menghapus dependensi yang bentrok, menambahkan <code className="bg-emerald-100 px-1 py-0.5 rounded text-xs font-mono">.npmrc</code>, dan mengatur <code className="bg-emerald-100 px-1 py-0.5 rounded text-xs font-mono">legacy-peer-deps</code> di vercel.json.
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 flex items-start gap-2.5">
+            <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="block text-blue-950">100% Web App Responsive (Bukan APK)</strong>
+              Aplikasi ini adalah website modern berbasis React & Vite yang bisa dibuka langsung di browser HP, tablet, maupun laptop tanpa perlu menginstall file APK sama sekali.
             </div>
           </div>
 
@@ -61,16 +70,16 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
               <div className="flex-1 space-y-1.5">
                 <h4 className="font-bold text-slate-900 flex items-center gap-2">
                   <Github className="w-4 h-4 text-slate-800" />
-                  Push Kode ke GitHub Repository Anda
+                  Kirim Perbaikan ke GitHub Repo Anda
                 </h4>
                 <p className="text-slate-600 text-xs">
-                  Buka terminal di komputer Anda, inisialisasi git jika belum, lalu push ke GitHub:
+                  Jalankan perintah ini di terminal folder project Anda agar perubahan masuk ke repo GitHub:
                 </p>
                 <div className="relative bg-slate-900 text-slate-100 p-3 rounded-xl font-mono text-xs overflow-x-auto">
                   <button
                     onClick={() =>
                       copyToClipboard(
-                        'git add .\ngit commit -m "feat: text-to-audio with download & vercel config"\ngit push origin main',
+                        'git add .\ngit commit -m "fix: resolve esbuild peer dependency & add .npmrc for vercel"\ngit push origin main',
                         'git'
                       )
                     }
@@ -80,7 +89,7 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
                   </button>
                   <code>
                     git add .<br />
-                    git commit -m "feat: text-to-audio with download & vercel config"<br />
+                    git commit -m "fix: resolve esbuild peer dependency & add .npmrc for vercel"<br />
                     git push origin main
                   </code>
                 </div>
@@ -92,26 +101,10 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
               <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                 2
               </div>
-              <div className="flex-1 space-y-1">
-                <h4 className="font-bold text-slate-900">Import Repository di Vercel Dashboard</h4>
-                <p className="text-slate-600 text-xs">
-                  Buka <strong>vercel.com</strong>, klik <strong>"Add New..." &gt; "Project"</strong>, lalu pilih repository GitHub Anda.
-                </p>
-                <p className="text-slate-500 text-xs italic">
-                  *Vercel akan otomatis mengenali project sebagai Vite dengan build command <code>npm run build</code> dan output directory <code>dist</code>.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                3
-              </div>
               <div className="flex-1 space-y-2">
-                <h4 className="font-bold text-slate-900">Tambahkan Environment Variable di Vercel</h4>
+                <h4 className="font-bold text-slate-900">Pastikan Environment Variable Terisi di Vercel</h4>
                 <p className="text-slate-600 text-xs">
-                  Pada bagian <strong>Environment Variables</strong> di Vercel sebelum menekan tombol Deploy, tambahkan:
+                  Buka project Anda di <strong>Vercel Dashboard &gt; Settings &gt; Environment Variables</strong>:
                 </p>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
@@ -127,21 +120,21 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
                     </button>
                   </div>
                   <p className="text-slate-500 text-[11px]">
-                    Isi nilainya dengan Gemini API key Anda yang aktif (dari Google AI Studio).
+                    Isi nilainya dengan API key Gemini Anda dari Google AI Studio.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Step 4 */}
+            {/* Step 3 */}
             <div className="flex gap-3">
               <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                4
+                3
               </div>
               <div className="flex-1 space-y-1">
-                <h4 className="font-bold text-slate-900">Klik "Deploy"</h4>
+                <h4 className="font-bold text-slate-900">Redeploy di Vercel</h4>
                 <p className="text-slate-600 text-xs">
-                  Dalam waktu sekitar 1 menit, website Anda sudah aktif di domain gratis Vercel (seperti <code>https://nama-repo.vercel.app</code>) dengan audio TTS dan download berfungsi 100%!
+                  Begitu Anda push ke GitHub, Vercel akan otomatis mendeteksi commit baru dan menjalankan build. Anda juga bisa menekan tombol <strong>"Redeploy"</strong> di tab Deployments Vercel. Error ERESOLVE tidak akan muncul lagi!
                 </p>
               </div>
             </div>
@@ -151,7 +144,7 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <a
-            href="https://vercel.com/new"
+            href="https://vercel.com/dashboard"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs text-indigo-700 font-semibold hover:underline"
@@ -164,7 +157,7 @@ export const VercelDeployGuideModal: React.FC<VercelDeployGuideModalProps> = ({ 
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
           >
-            Mengerti & Tutup
+            Tutup
           </button>
         </div>
       </div>

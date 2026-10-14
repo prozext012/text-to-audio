@@ -2,12 +2,21 @@ import type { Request, Response } from 'express';
 import { generateTTSAudio } from '../src/server/geminiCore';
 
 export default async function handler(req: Request, res: Response) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
   try {
-    const { text, voice = 'Kore', style = 'Warm, expressive, natural Indonesian storyteller explaining digital technology clearly' } = req.body || {};
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const { text, voice = 'Kore', style = 'Warm, expressive, natural Indonesian storyteller explaining digital technology clearly' } = body;
 
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'Text is required for TTS generation' });
