@@ -17,6 +17,8 @@ import {
   ArrowRight,
   Headphones,
   CheckCircle2,
+  Download,
+  Mic,
   Share2,
 } from 'lucide-react';
 import { Header } from './components/Header';
@@ -25,18 +27,21 @@ import { StorySectionCard } from './components/StorySectionCard';
 import { MonetizationSimulator } from './components/MonetizationSimulator';
 import { PrivacyAuditSection } from './components/PrivacyAuditSection';
 import { MysteryCommentBoard } from './components/MysteryCommentBoard';
+import { TtsStudio } from './components/TtsStudio';
+import { VercelDeployGuideModal } from './components/VercelDeployGuideModal';
 import {
   STORY_SECTIONS,
   FULL_STORY_SCRIPT,
   StorySection,
   VOICES,
 } from './data/storyData';
-import { requestTTS, createAudioFromBase64 } from './services/ttsService';
+import { requestTTS, createAudioFromBase64, downloadAudioBase64 } from './services/ttsService';
 
 export default function App() {
   // Voice selection state
   const [selectedVoice, setSelectedVoice] = useState('Kore');
-  const [activeTab, setActiveTab] = useState<'story' | 'simulator' | 'privacy' | 'comment'>('story');
+  const [activeTab, setActiveTab] = useState<'story' | 'tts-studio' | 'simulator' | 'privacy' | 'comment'>('story');
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
 
   // Audio playback state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -48,8 +53,8 @@ export default function App() {
   const [currentTitle, setCurrentTitle] = useState('Narasi Penuh: Rahasia Aplikasi Gratis');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Cached audio URLs
-  const audioCacheRef = useRef<Map<string, { audio: HTMLAudioElement; url: string }>>(new Map());
+  // Cached audio items
+  const audioCacheRef = useRef<Map<string, { audio: HTMLAudioElement; url: string; base64: string }>>(new Map());
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Cleanup on unmount
@@ -140,8 +145,8 @@ export default function App() {
         style: 'Warm, natural, engaging Indonesian voice narrator explaining tech economics',
       });
 
-      const { audio, url } = createAudioFromBase64(res.audioBase64);
-      audioCacheRef.current.set(cacheKey, { audio, url });
+      const { audio, url, base64 } = createAudioFromBase64(res.audioBase64);
+      audioCacheRef.current.set(cacheKey, { audio, url, base64 });
       currentAudioRef.current = audio;
       currentAudioRef.current.playbackRate = playbackRate;
       attachAudioListeners(audio);
@@ -163,6 +168,62 @@ export default function App() {
   // Play single section
   const handlePlaySection = (section: StorySection) => {
     playAudioForText(section.scriptText, section.id, section.title);
+  };
+
+  // Download section audio
+  const handleDownloadSection = async (section: StorySection) => {
+    const cacheKey = `${selectedVoice}_${section.id}`;
+    if (audioCacheRef.current.has(cacheKey)) {
+      const cached = audioCacheRef.current.get(cacheKey)!;
+      downloadAudioBase64(cached.base64, `${section.title}-${selectedVoice}.wav`);
+      return;
+    }
+
+    // Fetch and download
+    try {
+      const res = await requestTTS({
+        text: section.scriptText,
+        voice: selectedVoice,
+        style: 'Warm, natural, engaging Indonesian voice narrator explaining tech economics',
+      });
+      const { audio, url, base64 } = createAudioFromBase64(res.audioBase64);
+      audioCacheRef.current.set(cacheKey, { audio, url, base64 });
+      downloadAudioBase64(res.audioBase64, `${section.title}-${selectedVoice}.wav`);
+    } catch (err: any) {
+      alert(`Gagal mengunduh audio: ${err.message || 'Kendala koneksi'}`);
+    }
+  };
+
+  // Download from main audio player
+  const handleDownloadCurrentAudio = async () => {
+    const cacheKey = `${selectedVoice}_${currentPlayingId}`;
+    if (audioCacheRef.current.has(cacheKey)) {
+      const cached = audioCacheRef.current.get(cacheKey)!;
+      downloadAudioBase64(cached.base64, `${currentTitle}-${selectedVoice}.wav`);
+      return;
+    }
+
+    // Generate if not cached
+    const textToGen =
+      currentPlayingId === 'full'
+        ? FULL_STORY_SCRIPT
+        : STORY_SECTIONS.find((s) => s.id === currentPlayingId)?.scriptText || FULL_STORY_SCRIPT;
+
+    setIsLoading(true);
+    try {
+      const res = await requestTTS({
+        text: textToGen,
+        voice: selectedVoice,
+        style: 'Warm, natural, engaging Indonesian voice narrator explaining tech economics',
+      });
+      const { audio, url, base64 } = createAudioFromBase64(res.audioBase64);
+      audioCacheRef.current.set(cacheKey, { audio, url, base64 });
+      downloadAudioBase64(res.audioBase64, `${currentTitle}-${selectedVoice}.wav`);
+    } catch (err: any) {
+      alert(`Gagal mengunduh audio: ${err.message || 'Kendala koneksi'}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Toggle play/pause from the player bar
@@ -208,7 +269,6 @@ export default function App() {
     setSelectedVoice(voice);
     if (currentAudioRef.current && isPlaying) {
       currentAudioRef.current.pause();
-      // Restart current track with new voice
       setTimeout(() => {
         if (currentPlayingId === 'full') {
           playAudioForText(FULL_STORY_SCRIPT, 'full', currentTitle);
@@ -231,6 +291,7 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab as any)}
         isPlayingGlobal={isPlaying}
+        onOpenDeployGuide={() => setIsDeployModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -250,15 +311,19 @@ export default function App() {
 
         {/* Hero Section */}
         <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white p-6 sm:p-10 shadow-2xl border border-indigo-800/40">
-          {/* Subtle Background Glow */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
           <div className="relative z-10 max-w-3xl">
             {/* Tag / Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 mb-4">
-              <Headphones className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Dinarasikan dengan Suara AI: gemini-3.8-flash-tts</span>
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 border border-indigo-400/30 text-indigo-300">
+                <Headphones className="w-3.5 h-3.5 text-indigo-400" />
+                <span>AI TTS: gemini-3.8-flash-tts + Fitur Download WAV</span>
+              </div>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                ✓ Siap Hosting Vercel
+              </span>
             </div>
 
             {/* Main Headline */}
@@ -273,10 +338,10 @@ export default function App() {
             {/* Intro Copy */}
             <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
               Kamu pasti pernah mikir gitu. Dan jawabannya ternyata bukan satu, tapi ada{' '}
-              <strong className="text-white font-bold">tiga petunjuk rahasia</strong>. Kita buka satu per satu secara interaktif lengkap dengan narasi suara.
+              <strong className="text-white font-bold">tiga petunjuk rahasia</strong>. Dengarkan narasinya, buat suara baru sendiri, dan download rekaman suaranya kapan saja.
             </p>
 
-            {/* Primary Action Button: Play Full Story */}
+            {/* Primary Action Buttons */}
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={handlePlayFullStory}
@@ -302,11 +367,20 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => setActiveTab('simulator')}
-                className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs sm:text-sm border border-white/10 transition backdrop-blur-xs"
+                onClick={() => setActiveTab('tts-studio')}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-md shadow-indigo-600/30 transition hover:scale-[1.02]"
               >
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                <span>Coba Simulator Omset</span>
+                <Mic className="w-4 h-4 text-amber-300" />
+                <span>Bikin Suara Sendiri (TTS Studio)</span>
+              </button>
+
+              <button
+                onClick={handleDownloadCurrentAudio}
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs sm:text-sm border border-white/10 transition backdrop-blur-xs"
+                title="Unduh rekaman suara audio WAV"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                <span>Download Audio</span>
               </button>
             </div>
 
@@ -314,21 +388,21 @@ export default function App() {
             <div className="mt-8 pt-6 border-t border-indigo-800/60 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex items-center gap-2 text-xs text-slate-300">
                 <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
-                <span>Petunjuk 1: <strong>Pengiklan</strong></span>
+                <span>Petunjuk 1: <strong>Pengiklan yang Bayar</strong></span>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-300">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Petunjuk 2: <strong>Fitur Premium</strong></span>
+                <span>Petunjuk 2: <strong>Fitur Premium / Freemium</strong></span>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-300">
                 <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
-                <span>Petunjuk 3: <strong>Belanja & Mitra</strong></span>
+                <span>Petunjuk 3: <strong>Belanja & Kemitraan</strong></span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Global Floating/Sticky Audio Player Bar */}
+        {/* Global Persistent Audio Player Bar */}
         <section className="sticky top-20 z-30">
           <AudioPlayerBar
             isPlaying={isPlaying}
@@ -338,11 +412,13 @@ export default function App() {
             playbackRate={playbackRate}
             currentTitle={currentTitle}
             selectedVoice={selectedVoice}
+            hasAudio={Boolean(currentAudioRef.current)}
             onTogglePlay={handleTogglePlay}
             onReplay={handleReplay}
             onSeek={handleSeek}
             onChangeSpeed={handleChangeSpeed}
             onVoiceChange={handleVoiceChange}
+            onDownload={handleDownloadCurrentAudio}
           />
         </section>
 
@@ -357,6 +433,7 @@ export default function App() {
                 isCurrentlyPlaying={isPlaying && currentPlayingId === section.id}
                 isLoadingThisSection={isLoading && currentPlayingId === section.id}
                 onPlaySection={handlePlaySection}
+                onDownloadSection={handleDownloadSection}
                 index={idx}
               />
             ))}
@@ -365,25 +442,31 @@ export default function App() {
             <div className="rounded-2xl p-6 bg-gradient-to-r from-indigo-50 via-blue-50 to-emerald-50 border border-indigo-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
                 <h4 className="text-base font-bold text-slate-900">
-                  Ingin menghitung sendiri omset aplikasi gratis?
+                  Ingin coba ubah teks kamu sendiri menjadi suara AI?
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-                  Gunakan simulator untuk memproyeksikan pendapatan iklan, freemium, dan belanja dalam aplikasi.
+                  Gunakan fitur Studio TTS untuk mengetik kalimat apapun dan mengunduh rekaman audionya dalam format WAV.
                 </p>
               </div>
               <button
-                onClick={() => setActiveTab('simulator')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition whitespace-nowrap"
+                onClick={() => setActiveTab('tts-studio')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition whitespace-nowrap"
               >
-                <span>Buka Simulator Interaktif</span>
+                <span>Buka Studio Bikin Suara</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Comment Board also embedded at bottom of story */}
+            {/* Comment Board */}
             <div className="pt-4">
               <MysteryCommentBoard selectedVoice={selectedVoice} />
             </div>
+          </div>
+        )}
+
+        {activeTab === 'tts-studio' && (
+          <div className="space-y-6">
+            <TtsStudio />
           </div>
         )}
 
@@ -415,6 +498,12 @@ export default function App() {
         )}
       </main>
 
+      {/* Vercel Deploy Guide Modal */}
+      <VercelDeployGuideModal
+        isOpen={isDeployModalOpen}
+        onClose={() => setIsDeployModalOpen(false)}
+      />
+
       {/* Footer */}
       <footer className="mt-16 bg-white border-t border-slate-200/80 py-8 text-xs text-slate-500">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -428,10 +517,16 @@ export default function App() {
             <span className="text-slate-400">• Edukasi Ekonomi Digital</span>
           </div>
 
-          <div className="flex items-center gap-3 text-slate-500 text-xs">
+          <div className="flex items-center gap-4 text-slate-500 text-xs flex-wrap">
+            <button
+              onClick={() => setIsDeployModalOpen(true)}
+              className="text-indigo-600 hover:text-indigo-800 font-semibold underline flex items-center gap-1"
+            >
+              <span>Panduan Hosting Vercel (GitHub)</span>
+            </button>
             <span className="flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-              TTS ditenagai model: <code className="text-slate-700 font-bold">gemini-3.8-flash-tts</code>
+              TTS: <code className="text-slate-700 font-bold">gemini-3.8-flash-tts</code>
             </span>
           </div>
         </div>

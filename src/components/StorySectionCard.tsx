@@ -20,8 +20,8 @@ import {
   Lock,
   MessageSquare,
   Sparkles,
-  ArrowRight,
   Sliders,
+  Download,
 } from 'lucide-react';
 import { StorySection } from '../data/storyData';
 
@@ -30,6 +30,7 @@ interface StorySectionCardProps {
   isCurrentlyPlaying: boolean;
   isLoadingThisSection: boolean;
   onPlaySection: (section: StorySection) => void;
+  onDownloadSection?: (section: StorySection) => void;
   index: number;
 }
 
@@ -38,20 +39,15 @@ export const StorySectionCard: React.FC<StorySectionCardProps> = ({
   isCurrentlyPlaying,
   isLoadingThisSection,
   onPlaySection,
+  onDownloadSection,
   index,
 }) => {
   // Micro-interactive states
-  // For Clue 1: Ad Calculator
   const [dailyHours, setDailyHours] = useState(2.5);
-  const [adFrequency, setAdFrequency] = useState(6); // ads per hour
-
-  // For Clue 2: Freemium Toggle
+  const [adFrequency, setAdFrequency] = useState(6);
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'premium'>('free');
-
-  // For Clue 3: IAP Simulator
   const [gameSkinCount, setGameSkinCount] = useState(2);
 
-  // Icon mapping
   const renderIcon = (iconName: string) => {
     const props = { className: 'w-4 h-4 text-indigo-600' };
     switch (iconName) {
@@ -90,10 +86,8 @@ export const StorySectionCard: React.FC<StorySectionCardProps> = ({
     }
   };
 
-  // Calculations
-  // Clue 1: Estimated monthly ad revenue from single user (e.g., CPM Rp25,000 / 1000 impressions)
   const monthlyAdsSeen = Math.round(dailyHours * adFrequency * 30);
-  const monthlyAdValue = Math.round((monthlyAdsSeen / 1000) * 35000); // in IDR
+  const monthlyAdValue = Math.round((monthlyAdsSeen / 1000) * 35000);
 
   return (
     <article
@@ -110,7 +104,7 @@ export const StorySectionCard: React.FC<StorySectionCardProps> = ({
       )}
 
       <div className="p-5 sm:p-7">
-        {/* Header Badge & Audio Button */}
+        {/* Header Badge & Audio Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <span
@@ -123,34 +117,47 @@ export const StorySectionCard: React.FC<StorySectionCardProps> = ({
             </span>
           </div>
 
-          {/* Quick Play Audio Button */}
-          <button
-            onClick={() => onPlaySection(section)}
-            disabled={isLoadingThisSection}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              isCurrentlyPlaying
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60'
-            }`}
-          >
-            {isLoadingThisSection ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Membuat Suara...</span>
-              </>
-            ) : isCurrentlyPlaying ? (
-              <>
-                <Pause className="w-3.5 h-3.5 fill-current" />
-                <span>Jeda Bagian Ini</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <Volume2 className="w-3.5 h-3.5 text-indigo-500" />
-                <span>Dengarkan Suara</span>
-              </>
+          {/* Action buttons: Play & Download */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPlaySection(section)}
+              disabled={isLoadingThisSection}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                isCurrentlyPlaying
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60'
+              }`}
+            >
+              {isLoadingThisSection ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Membuat Suara...</span>
+                </>
+              ) : isCurrentlyPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                  <span>Jeda Bagian Ini</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <Volume2 className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Dengarkan Suara</span>
+                </>
+              )}
+            </button>
+
+            {onDownloadSection && (
+              <button
+                onClick={() => onDownloadSection(section)}
+                title="Download audio WAV untuk bagian ini"
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 transition"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">WAV</span>
+              </button>
             )}
-          </button>
+          </div>
         </div>
 
         {/* Title & Subtitle */}
@@ -161,7 +168,7 @@ export const StorySectionCard: React.FC<StorySectionCardProps> = ({
           {section.subtitle}
         </p>
 
-        {/* Narrative Script Box (The exact Indonesian copy) */}
+        {/* Narrative Script Box */}
         <div className="relative p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200/90 text-slate-800 my-4">
           <div className="absolute top-2 left-3 text-3xl font-serif text-indigo-200 select-none">
             “

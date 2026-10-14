@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, RotateCcw, Volume2, Sparkles, Loader2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, Sparkles, Loader2, Download } from 'lucide-react';
 import { VOICES } from '../data/storyData';
 
 interface AudioPlayerBarProps {
@@ -10,11 +10,13 @@ interface AudioPlayerBarProps {
   playbackRate: number;
   currentTitle: string;
   selectedVoice: string;
+  hasAudio: boolean;
   onTogglePlay: () => void;
   onReplay: () => void;
   onSeek: (seconds: number) => void;
   onChangeSpeed: (speed: number) => void;
   onVoiceChange: (voice: string) => void;
+  onDownload: () => void;
 }
 
 export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
@@ -25,11 +27,13 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   playbackRate,
   currentTitle,
   selectedVoice,
+  hasAudio,
   onTogglePlay,
   onReplay,
   onSeek,
   onChangeSpeed,
   onVoiceChange,
+  onDownload,
 }) => {
   const formatTime = (secs: number) => {
     if (isNaN(secs) || secs < 0) return '0:00';
@@ -65,8 +69,20 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
             </div>
           </div>
 
-          {/* Voice & Speed Quick Switchers */}
-          <div className="flex items-center gap-2 ml-auto">
+          {/* Voice & Speed Quick Switchers & Download */}
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            {/* Download Button */}
+            <button
+              onClick={onDownload}
+              disabled={isLoading}
+              title="Download rekaman audio format .wav"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-xs transition hover:scale-105 active:scale-95 disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="hidden sm:inline">Download Audio</span>
+              <span className="text-[10px] font-mono opacity-80">.WAV</span>
+            </button>
+
             {/* Speed Picker */}
             <div className="flex items-center bg-slate-800/80 rounded-lg p-0.5 border border-slate-700/60 text-xs">
               {[0.8, 1.0, 1.2, 1.5].map((speed) => (
@@ -159,7 +175,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
                 ? 'Sedang membuat suara AI...'
                 : isPlaying
                 ? 'Sedang memutar narasi suara...'
-                : 'Klik tombol putar untuk mendengarkan'}
+                : 'Klik tombol putar untuk mendengarkan atau unduh WAV'}
             </span>
           </div>
 

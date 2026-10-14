@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { MessageSquare, Send, Sparkles, Volume2, Play, Pause, Loader2, Bot, HelpCircle, User } from 'lucide-react';
+import { MessageSquare, Send, Sparkles, Volume2, Play, Pause, Loader2, Bot, Download, User } from 'lucide-react';
 import { PRESET_MYSTERIES } from '../data/storyData';
-import { askMystery, createAudioFromBase64 } from '../services/ttsService';
+import { askMystery, createAudioFromBase64, downloadAudioBase64 } from '../services/ttsService';
 
 interface CommentItem {
   id: string;
@@ -42,11 +42,8 @@ export const MysteryCommentBoard: React.FC<MysteryCommentBoardProps> = ({ select
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentlyPlayingId, setCurrentlyPlayingId] = useState<string | null>(null);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-  const [activePreset, setActivePreset] = useState<string | null>(null);
 
-  // Play comment audio
   const handlePlayCommentAudio = async (item: CommentItem) => {
-    // If currently playing this comment, pause it
     if (currentlyPlayingId === item.id && currentAudio) {
       if (!currentAudio.paused) {
         currentAudio.pause();
@@ -59,7 +56,6 @@ export const MysteryCommentBoard: React.FC<MysteryCommentBoardProps> = ({ select
       currentAudio.pause();
     }
 
-    // If audio already exists, play it
     if (item.audioBase64) {
       const { audio } = createAudioFromBase64(item.audioBase64);
       audio.onended = () => setCurrentlyPlayingId(null);
@@ -69,7 +65,6 @@ export const MysteryCommentBoard: React.FC<MysteryCommentBoardProps> = ({ select
       return;
     }
 
-    // Else request TTS on the fly
     try {
       setCurrentlyPlayingId(item.id);
       const res = await fetch('/api/tts', {
@@ -98,6 +93,34 @@ export const MysteryCommentBoard: React.FC<MysteryCommentBoardProps> = ({ select
     }
   };
 
+  const handleDownloadComment = async (item: CommentItem) => {
+    if (item.audioBase64) {
+      downloadAudioBase64(item.audioBase64, `jawaban-${item.author}-${item.id}.wav`);
+      return;
+    }
+
+    // Generate then download
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: item.answer,
+          voice: selectedVoice,
+          style: 'Engaging, friendly Indonesian tech host answering user comment',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.audioBase64) {
+        item.audioBase64 = data.audioBase64;
+        downloadAudioBase64(data.audioBase64, `jawaban-${item.author}-${item.id}.wav`);
+      }
+    } catch (e) {
+      alert('Gagal mendownload audio');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputQuestion.trim()) return;
@@ -121,7 +144,6 @@ export const MysteryCommentBoard: React.FC<MysteryCommentBoardProps> = ({ select
       setComments((prev) => [newComment, ...prev]);
       setInputQuestion('');
 
-      // Auto play newly generated answer
       if (response.audioBase64) {
         if (currentAudio) currentAudio.pause();
         const { audio } = createAudioFromBase64(response.audioBase64);
@@ -162,10 +184,7 @@ export const MysteryCommentBoard: React.FC<MysteryCommentBoardProps> = ({ select
           {PRESET_MYSTERIES.map((preset, idx) => (
             <button
               key={idx}
-              onClick={() => {
-                setInputQuestion(preset);
-                setActivePreset(preset);
-              }}
+              onClick={() => setInputQuestion(preset)}
               className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-200/80 transition-colors text-slate-700 text-left"
             >
               💬 {preset}
@@ -254,28 +273,38 @@ export const MysteryCommentBoard: React.FC<MysteryCommentBoardProps> = ({ select
                 </div>
               </div>
 
-              {/* TTS play button */}
-              <button
-                onClick={() => handlePlayCommentAudio(item)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                  currentlyPlayingId === item.id
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200'
-                }`}
-              >
-                {currentlyPlayingId === item.id ? (
-                  <>
-                    <Pause className="w-3 h-3 fill-current" />
-                    <span>Jeda Audio</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3 h-3 fill-current" />
-                    <Volume2 className="w-3 h-3 text-indigo-500" />
-                    <span>Bacakan Jawaban</span>
-                  </>
-                )}
-              </button>
+              {/* TTS play & download buttons */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handlePlayCommentAudio(item)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                    currentlyPlayingId === item.id
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200'
+                  }`}
+                >
+                  {currentlyPlayingId === item.id ? (
+                    <>
+                      <Pause className="w-3 h-3 fill-current" />
+                      <span>Jeda Audio</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3 h-3 fill-current" />
+                      <Volume2 className="w-3 h-3 text-indigo-500" />
+                      <span>Bacakan</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleDownloadComment(item)}
+                  title="Download file WAV jawaban ini"
+                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 border border-slate-200 transition"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             <p className="text-xs sm:text-sm font-semibold text-slate-800 pl-9 mb-3">
